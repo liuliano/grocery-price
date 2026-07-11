@@ -22,10 +22,10 @@
       <label for="shoppingList">Shopping list</label>
       <textarea id="shoppingList" rows="7" placeholder="whole milk 1 gallon&#10;large eggs 12 count&#10;boneless chicken breast"></textarea>
       <div class="button-grid">
-        <button id="saveList">Save on phone</button>
-        <button id="loadMeal" class="secondary">Add taco night</button>
+        <button id="saveList" type="button">Save on phone</button>
+        <button id="loadMeal" class="secondary" type="button">Add taco night</button>
       </div>
-      <button id="refreshPrices" class="refresh">Refresh prices</button>
+      <button id="refreshPrices" class="refresh" type="button">Refresh prices</button>
       <p id="status" class="status" aria-live="polite"></p>
     </section>
 
@@ -33,6 +33,6 @@
     <section id="results" class="results"></section>
   </main>
 
-  <script src="app.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
