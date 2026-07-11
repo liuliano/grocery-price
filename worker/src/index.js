@@ -36,6 +36,23 @@ function githubHeaders(token) {
   };
 }
 
+async function resolveGitHubToken(env) {
+  const binding = env.GITHUB_TOKEN;
+
+  if (typeof binding === "string" && binding.trim()) {
+    return binding.trim();
+  }
+
+  if (binding && typeof binding.get === "function") {
+    const value = await binding.get();
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+}
+
 async function triggerRefresh(request, env, origin) {
   const body = await request.json().catch(() => null);
   const items = body?.items;
@@ -54,13 +71,14 @@ async function triggerRefresh(request, env, origin) {
     return json({ error: "No valid items were supplied." }, 400, origin);
   }
 
-  if (!env.GITHUB_TOKEN) {
-    return json({ error: "The Worker is missing its GITHUB_TOKEN secret." }, 500, origin);
+  const githubToken = await resolveGitHubToken(env);
+  if (!githubToken) {
+    return json({ error: "The Worker cannot read its GITHUB_TOKEN runtime binding." }, 500, origin);
   }
 
   const response = await fetch(`${GITHUB_API}/dispatches`, {
     method: "POST",
-    headers: githubHeaders(env.GITHUB_TOKEN),
+    headers: githubHeaders(githubToken),
     body: JSON.stringify({
       event_type: "basketiq-price-search",
       client_payload: {
