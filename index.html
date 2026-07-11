@@ -16,22 +16,41 @@
 </head>
 <body>
   <main class="app-shell">
-    <header class="hero"><div class="brand-lockup"><img class="brand-icon" src="icons/grocery-icon.svg" alt=""><div><p class="eyebrow">SMART GROCERY SAVINGS</p><h1>BasketIQ</h1><p class="subtitle">ZIP 33579 · Walmart · Publix · Aldi · Sam's Club</p></div></div></header>
-    <section class="dashboard-grid" aria-label="Savings dashboard"><article class="metric-card"><span>Estimated savings</span><strong>—</strong><small>after price refresh</small></article><article class="metric-card"><span>Cheapest store</span><strong>—</strong><small>basket winner</small></article><article class="metric-card"><span>Basket total</span><strong>—</strong><small>current list</small></article><article class="metric-card"><span>Last refresh</span><strong>—</strong><small>live prices</small></article></section>
-    <section class="quick-actions"><button class="quick-card" type="button" data-scroll="shopping"><span>🛒</span><b>Inventory</b></button><button class="quick-card" id="loadMeal" type="button"><span>🌮</span><b>Taco night</b></button><button class="quick-card" type="button" data-scroll="results"><span>💲</span><b>Compare</b></button></section>
-    <section class="panel" id="shopping">
-      <div class="section-heading"><div><p class="section-kicker">BUILD YOUR BASKET</p><h2>Shared inventory</h2></div><span class="zip-pill" id="selectedCount">0 selected</span></div>
-      <div class="inventory-toolbar"><input id="inventorySearch" type="search" placeholder="Search cheese, milk, chicken…" autocomplete="off"><button id="addInventoryItem" class="add-item-button" type="button">Add item</button></div>
-      <div id="inventoryList" class="inventory-list" aria-live="polite"></div>
-      <button id="saveSharedInventory" class="workflow-button" type="button">Save inventory for both phones</button>
-      <div class="button-grid"><button id="clearSelection" class="secondary" type="button">Clear checks</button><button id="refreshPrices" class="refresh" type="button">Compare checked items</button></div>
-      <p class="privacy-note">The catalog is shared through GitHub. Checked items stay separate on each phone.</p>
-      <p id="status" class="status" aria-live="polite"></p>
+    <header class="hero">
+      <div class="brand-lockup">
+        <img class="brand-icon" src="icons/grocery-icon.svg" alt="">
+        <div>
+          <p class="eyebrow">SMART GROCERY SAVINGS</p>
+          <h1>BasketIQ</h1>
+          <p class="subtitle">Compare nearby grocery prices in ZIP 33579</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="search-panel">
+      <label for="productSearch">What are you shopping for?</label>
+      <div class="search-row">
+        <input id="productSearch" type="search" placeholder="Cheddar cheese, milk, chicken…" autocomplete="off" enterkeyhint="search">
+        <button id="searchPrices" type="button">Search prices</button>
+      </div>
+      <div class="suggestions" aria-label="Popular searches">
+        <button type="button" data-query="cheddar cheese">Cheddar cheese</button>
+        <button type="button" data-query="whole milk 1 gallon">Milk</button>
+        <button type="button" data-query="large eggs 12 count">Eggs</button>
+        <button type="button" data-query="boneless chicken breast">Chicken</button>
+      </div>
+      <p id="status" class="status" aria-live="polite">Search one item to compare Walmart, Publix, Aldi, and Sam's Club.</p>
     </section>
-    <section id="summary" class="summary-grid"></section><section id="results" class="results"></section>
+
+    <section id="searchSummary" class="search-summary" hidden>
+      <span>Best price</span>
+      <strong id="bestPrice">—</strong>
+      <p id="bestStore">Waiting for results</p>
+    </section>
+
+    <section id="results" class="results"></section>
   </main>
-  <nav class="bottom-nav" aria-label="Primary"><button type="button" class="active" data-scroll="top"><span>⌂</span>Home</button><button type="button" data-scroll="shopping"><span>🛒</span>Items</button><button type="button" id="mealNav"><span>🍽</span>Meals</button><button type="button" data-scroll="results"><span>💲</span>Compare</button></nav>
+
   <script type="module" src="js/app.js"></script>
-  <script>document.addEventListener('click',event=>{const target=event.target.closest('[data-scroll]');if(!target)return;const id=target.dataset.scroll;(id==='top'?document.body:document.getElementById(id))?.scrollIntoView({behavior:'smooth'});});</script>
 </body>
 </html>
