@@ -54,13 +54,17 @@ async function triggerRefresh(request, env, origin) {
     return json({ error: "No valid items were supplied." }, 400, origin);
   }
 
-  const response = await fetch(`${GITHUB_API}/actions/workflows/refresh-prices.yml/dispatches`, {
+  if (!env.GITHUB_TOKEN) {
+    return json({ error: "The Worker is missing its GITHUB_TOKEN secret." }, 500, origin);
+  }
+
+  const response = await fetch(`${GITHUB_API}/dispatches`, {
     method: "POST",
     headers: githubHeaders(env.GITHUB_TOKEN),
     body: JSON.stringify({
-      ref: "main",
-      inputs: {
-        shopping_list: JSON.stringify(cleanItems),
+      event_type: "basketiq-price-search",
+      client_payload: {
+        shopping_list: cleanItems,
         zip_code: zipCode
       }
     })
@@ -68,54 +72,14 @@ async function triggerRefresh(request, env, origin) {
 
   if (response.status !== 204) {
     const detail = await response.text();
-    return json({ error: "GitHub could not start the price refresh.", detail }, 502, origin);
+    return json({
+      error: "GitHub could not start the price refresh.",
+      githubStatus: response.status,
+      detail
+    }, 502, origin);
   }
 
   return json({ ok: true, message: "Price refresh started." }, 202, origin);
-}
-
-async function saveInventory(request, env, origin) {
-  const body = await request.json().catch(() => null);
-  const items = body?.items;
-
-  if (!Array.isArray(items) || items.length < 1 || items.length > 500) {
-    return json({ error: "Inventory must contain between 1 and 500 items." }, 400, origin);
-  }
-
-  const cleanItems = [...new Set(items.map(item => String(item).trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
-
-  const fileResponse = await fetch(`${GITHUB_API}/contents/data/inventory.json?ref=main`, {
-    headers: githubHeaders(env.GITHUB_TOKEN)
-  });
-
-  if (!fileResponse.ok) {
-    return json({ error: "Could not read the shared inventory." }, 502, origin);
-  }
-
-  const current = await fileResponse.json();
-  const content = JSON.stringify({
-    updatedAt: new Date().toISOString(),
-    items: cleanItems
-  }, null, 2) + "\n";
-
-  const updateResponse = await fetch(`${GITHUB_API}/contents/data/inventory.json`, {
-    method: "PUT",
-    headers: githubHeaders(env.GITHUB_TOKEN),
-    body: JSON.stringify({
-      message: "Update shared BasketIQ inventory",
-      content: btoa(unescape(encodeURIComponent(content))),
-      sha: current.sha,
-      branch: "main"
-    })
-  });
-
-  if (!updateResponse.ok) {
-    const detail = await updateResponse.text();
-    return json({ error: "Could not save the shared inventory.", detail }, 502, origin);
-  }
-
-  return json({ ok: true, items: cleanItems.length }, 200, origin);
 }
 
 export default {
@@ -134,10 +98,6 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/refresh") {
       return triggerRefresh(request, env, origin);
-    }
-
-    if (request.method === "POST" && url.pathname === "/inventory") {
-      return saveInventory(request, env, origin);
     }
 
     if (request.method === "GET" && url.pathname === "/health") {

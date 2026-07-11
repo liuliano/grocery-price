@@ -12,6 +12,8 @@ on:
         required: true
         default: "33579"
         type: string
+  repository_dispatch:
+    types: [basketiq-price-search]
 
 permissions:
   contents: write
@@ -43,8 +45,8 @@ jobs:
 
       - name: Scrape grocery prices
         env:
-          SHOPPING_LIST: ${{ inputs.shopping_list }}
-          ZIP_CODE: ${{ inputs.zip_code }}
+          SHOPPING_LIST: ${{ github.event_name == 'repository_dispatch' && toJson(github.event.client_payload.shopping_list) || inputs.shopping_list }}
+          ZIP_CODE: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.zip_code || inputs.zip_code }}
         run: npm run scrape
 
       - name: Commit refreshed prices
