@@ -66,6 +66,6 @@ const output = {
   results
 };
 
-await fs.mkdir("data", { recursive: true });
-await fs.writeFile("data/prices.json", `${JSON.stringify(output, null, 2)}\n`, "utf8");
-console.log(`Saved ${results.length} item comparisons to data/prices.json`);
+await fs.mkdir("frontend/data", { recursive: true });
+await fs.writeFile("frontend/data/prices.json", `${JSON.stringify(output, null, 2)}\n`, "utf8");
+console.log(`Saved ${results.length} item comparisons to frontend/data/prices.json`);
