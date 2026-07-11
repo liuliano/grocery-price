@@ -1,41 +1,27 @@
-const INVENTORY_KEY = "basketiq-inventory-33579";
+const CHECKED_KEY = "basketiq-checked-items-33579";
 
-const DEFAULT_INVENTORY = [
-  "whole milk 1 gallon",
-  "large eggs 12 count",
-  "boneless chicken breast",
-  "ground beef 1 pound",
-  "sandwich bread",
-  "bananas",
-  "apples",
-  "shredded cheddar cheese 8 ounce",
-  "sliced cheddar cheese",
-  "mozzarella cheese 8 ounce",
-  "cream cheese 8 ounce",
-  "yogurt",
-  "butter",
-  "rice",
-  "pasta",
-  "tomato sauce",
-  "coffee",
-  "bottled water"
-];
-
-export function loadInventory() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(INVENTORY_KEY) || "null");
-    if (Array.isArray(saved) && saved.length) return saved;
-  } catch {}
-
-  return DEFAULT_INVENTORY.map((name, index) => ({
-    id: `default-${index}`,
+function buildInventory(names, checkedNames) {
+  return names.map((name, index) => ({
+    id: `item-${index}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     name,
-    checked: false
+    checked: checkedNames.has(name.toLowerCase())
   }));
 }
 
-export function saveInventory(items) {
-  localStorage.setItem(INVENTORY_KEY, JSON.stringify(items));
+export async function loadInventory() {
+  const checkedNames = new Set(
+    JSON.parse(localStorage.getItem(CHECKED_KEY) || "[]").map(name => name.toLowerCase())
+  );
+
+  const response = await fetch(`data/inventory.json?ts=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Unable to load shared inventory (${response.status}).`);
+  const data = await response.json();
+  return buildInventory(Array.isArray(data.items) ? data.items : [], checkedNames);
+}
+
+export function saveCheckedItems(items) {
+  const checked = items.filter(item => item.checked).map(item => item.name);
+  localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
 }
 
 export function addInventoryItem(items, name) {
@@ -55,4 +41,8 @@ export function addInventoryItem(items, name) {
 
 export function getCheckedInventoryItems(items) {
   return items.filter(item => item.checked).map(item => item.name);
+}
+
+export function getInventoryNames(items) {
+  return items.map(item => item.name);
 }
