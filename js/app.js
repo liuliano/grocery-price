@@ -23,7 +23,7 @@ async function refreshDisplayedPrices() {
     const data = await loadPriceData();
     renderSummary(summaryElement, data);
     renderResults(resultsElement, data);
-    setStatus(data.updatedAt ? "Latest saved prices loaded." : "No scrape has been run yet.");
+    setStatus(data.updatedAt ? "Latest saved prices loaded." : "No price update has been run yet.");
   } catch (error) {
     renderSummary(summaryElement, { results: [] });
     renderResults(resultsElement, { results: [] });
@@ -57,10 +57,15 @@ document.querySelector("#loadMeal").addEventListener("click", () => {
   setStatus("Taco night ingredients added.");
 });
 
-document.querySelector("#refreshPrices").addEventListener("click", () => {
+document.querySelector("#refreshDisplayedPrices").addEventListener("click", () => {
+  saveShoppingList(APP_CONFIG.storageKey, parseShoppingList(listElement.value));
+  refreshDisplayedPrices();
+});
+
+document.querySelector("#runPriceUpdate").addEventListener("click", () => {
   saveShoppingList(APP_CONFIG.storageKey, parseShoppingList(listElement.value));
   window.open(APP_CONFIG.workflowUrl, "_blank", "noopener,noreferrer");
-  setStatus("Run the GitHub workflow, then return here and reload the page.");
+  setStatus("GitHub opened so you can run the scraper workflow. Return here afterward and tap Reload latest prices.");
 });
 
 registerServiceWorker();
