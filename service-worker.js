@@ -1,4 +1,4 @@
-const CACHE_NAME = "grocery-price-v1";
+const CACHE_NAME = "basketiq-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -27,7 +27,6 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
-
   event.respondWith(
     fetch(event.request)
       .then(response => {
