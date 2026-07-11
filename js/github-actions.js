@@ -11,59 +11,51 @@ function headers(token) {
   };
 }
 
-export function getSavedToken() {
-  return localStorage.getItem(TOKEN_KEY) || "";
-}
-
-export function saveToken(token) {
-  localStorage.setItem(TOKEN_KEY, token.trim());
-}
-
-export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
-}
+export function getSavedToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
+export function saveToken(token) { localStorage.setItem(TOKEN_KEY, token.trim()); }
+export function clearToken() { localStorage.removeItem(TOKEN_KEY); }
 
 export async function triggerPriceWorkflow(token, items, zipCode) {
   const response = await fetch(`${API_ROOT}/actions/workflows/${WORKFLOW_FILE}/dispatches`, {
     method: "POST",
     headers: headers(token),
-    body: JSON.stringify({
-      ref: "main",
-      inputs: {
-        shopping_list: JSON.stringify(items),
-        zip_code: zipCode
-      }
-    })
+    body: JSON.stringify({ ref: "main", inputs: { shopping_list: JSON.stringify(items), zip_code: zipCode } })
   });
-
   if (response.status === 204) return;
+  const body = await response.json().catch(() => ({}));
+  throw new Error(body.message || `GitHub rejected the refresh (${response.status}).`);
+}
 
-  let message = `GitHub rejected the refresh (${response.status}).`;
-  try {
-    const body = await response.json();
-    if (body.message) message = body.message;
-  } catch {}
-  throw new Error(message);
+export async function saveSharedInventory(token, names) {
+  const fileUrl = `${API_ROOT}/contents/data/inventory.json`;
+  const current = await fetch(`${fileUrl}?ref=main`, { headers: headers(token) });
+  if (!current.ok) throw new Error(`Unable to read shared inventory (${current.status}).`);
+  const currentFile = await current.json();
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify({ updatedAt: new Date().toISOString(), items: names }, null, 2) + "\n")));
+  const response = await fetch(fileUrl, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify({ message: "Update shared grocery inventory", content, sha: currentFile.sha, branch: "main" })
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || `Unable to save shared inventory (${response.status}).`);
+  }
 }
 
 export async function waitForNewPrices(startedAt, onProgress, timeoutMs = 240000) {
   const started = Date.now();
   let attempts = 0;
-
   while (Date.now() - started < timeoutMs) {
     attempts += 1;
     onProgress?.(`Price update running… check ${attempts}`);
     await new Promise(resolve => setTimeout(resolve, 8000));
-
     try {
       const response = await fetch(`data/prices.json?refresh=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) continue;
       const data = await response.json();
-      if (data.updatedAt && new Date(data.updatedAt).getTime() >= startedAt - 5000) {
-        return data;
-      }
+      if (data.updatedAt && new Date(data.updatedAt).getTime() >= startedAt - 5000) return data;
     } catch {}
   }
-
-  throw new Error("The price update is still running. Try Reload latest prices in a minute.");
+  throw new Error("The price update is still running. Try again in a minute.");
 }
