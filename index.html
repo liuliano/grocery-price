@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Grocery Price Compare</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">ZIP 33579</p>
+        <h1>Grocery Price Compare</h1>
+        <p class="subtitle">Walmart · Publix · Aldi · Sam's Club</p>
+      </div>
+      <span class="badge">POC</span>
+    </header>
+
+    <section class="panel">
+      <label for="shoppingList">Shopping list</label>
+      <textarea id="shoppingList" rows="7" placeholder="whole milk 1 gallon&#10;large eggs 12 count&#10;boneless chicken breast"></textarea>
+      <div class="button-grid">
+        <button id="saveList">Save on phone</button>
+        <button id="loadMeal" class="secondary">Add taco night</button>
+      </div>
+      <button id="refreshPrices" class="refresh">Refresh prices</button>
+      <p id="status" class="status" aria-live="polite"></p>
+    </section>
+
+    <section id="summary" class="summary-grid"></section>
+    <section id="results" class="results"></section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
