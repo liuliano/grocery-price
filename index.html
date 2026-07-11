@@ -31,19 +31,29 @@
     </section>
 
     <section class="quick-actions">
-      <button class="quick-card" type="button" data-scroll="shopping"><span>🛒</span><b>Shopping list</b></button>
+      <button class="quick-card" type="button" data-scroll="shopping"><span>🛒</span><b>Inventory</b></button>
       <button class="quick-card" id="loadMeal" type="button"><span>🌮</span><b>Taco night</b></button>
       <button class="quick-card" type="button" data-scroll="results"><span>💲</span><b>Compare</b></button>
     </section>
 
     <section class="panel" id="shopping">
-      <div class="section-heading"><div><p class="section-kicker">PLAN YOUR BASKET</p><h2>Shopping list</h2></div><span class="zip-pill">33579</span></div>
-      <textarea id="shoppingList" rows="7" placeholder="whole milk 1 gallon&#10;large eggs 12 count&#10;boneless chicken breast"></textarea>
-      <div class="button-grid">
-        <button id="saveList" type="button">Save on phone</button>
-        <button id="refreshPrices" class="refresh" type="button">Refresh prices</button>
+      <div class="section-heading">
+        <div><p class="section-kicker">BUILD YOUR BASKET</p><h2>Store inventory</h2></div>
+        <span class="zip-pill" id="selectedCount">0 selected</span>
       </div>
-      <p class="privacy-note">The first refresh asks for a limited GitHub token and stores it only on this phone.</p>
+
+      <div class="inventory-toolbar">
+        <input id="inventorySearch" type="search" placeholder="Search cheese, milk, chicken…" autocomplete="off">
+        <button id="addInventoryItem" class="add-item-button" type="button">Add item</button>
+      </div>
+
+      <div id="inventoryList" class="inventory-list" aria-live="polite"></div>
+
+      <div class="button-grid">
+        <button id="clearSelection" class="secondary" type="button">Clear checks</button>
+        <button id="refreshPrices" class="refresh" type="button">Compare checked items</button>
+      </div>
+      <p class="privacy-note">Only checked items are sent to the browser scraper. Your inventory stays on this phone.</p>
       <p id="status" class="status" aria-live="polite"></p>
     </section>
 
@@ -53,7 +63,7 @@
 
   <nav class="bottom-nav" aria-label="Primary">
     <button type="button" class="active" data-scroll="top"><span>⌂</span>Home</button>
-    <button type="button" data-scroll="shopping"><span>🛒</span>List</button>
+    <button type="button" data-scroll="shopping"><span>🛒</span>Items</button>
     <button type="button" id="mealNav"><span>🍽</span>Meals</button>
     <button type="button" data-scroll="results"><span>💲</span>Compare</button>
   </nav>
