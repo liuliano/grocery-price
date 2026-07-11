@@ -1,0 +1,60 @@
+name: Refresh grocery prices
+
+on:
+  workflow_dispatch:
+    inputs:
+      shopping_list:
+        description: JSON array of grocery items
+        required: true
+        type: string
+      zip_code:
+        description: ZIP code
+        required: true
+        default: "33579"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: grocery-price-refresh
+  cancel-in-progress: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Scrape grocery prices
+        env:
+          SHOPPING_LIST: ${{ inputs.shopping_list }}
+          ZIP_CODE: ${{ inputs.zip_code }}
+        run: npm run scrape
+
+      - name: Commit refreshed prices
+        run: |
+          git config user.name "basketiq-bot"
+          git config user.email "actions@github.com"
+          git add data/prices.json
+          if git diff --cached --quiet; then
+            echo "No price changes to commit."
+            exit 0
+          fi
+          git commit -m "Refresh grocery prices"
+          git push origin HEAD:main

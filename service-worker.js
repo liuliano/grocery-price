@@ -1,4 +1,4 @@
-const CACHE_NAME = "basketiq-v2";
+const CACHE_NAME = "basketiq-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,9 +8,11 @@ const APP_SHELL = [
   "./js/app.js",
   "./js/config.js",
   "./js/data.js",
+  "./js/github-actions.js",
+  "./js/inventory.js",
   "./js/meals.js",
   "./js/render.js",
-  "./js/storage.js"
+  "./data/inventory.json"
 ];
 
 self.addEventListener("install", event => {
@@ -19,9 +21,7 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
-  );
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));
   self.clients.claim();
 });
 

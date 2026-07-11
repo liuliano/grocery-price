@@ -1,67 +1,115 @@
 import { APP_CONFIG } from "./config.js";
-import { loadShoppingList, parseShoppingList, saveShoppingList } from "./storage.js";
-import { MEAL_PRESETS, mergeItems } from "./meals.js";
+import { MEAL_PRESETS } from "./meals.js";
 import { loadPriceData } from "./data.js";
 import { renderResults, renderSummary } from "./render.js";
+import { addInventoryItem, getCheckedInventoryItems, getInventoryNames, loadInventory, saveCheckedItems } from "./inventory.js";
+import { getSavedToken, saveToken, saveSharedInventory, triggerPriceWorkflow, waitForNewPrices } from "./github-actions.js";
 
-const listElement = document.querySelector("#shoppingList");
 const statusElement = document.querySelector("#status");
 const summaryElement = document.querySelector("#summary");
 const resultsElement = document.querySelector("#results");
+const refreshButton = document.querySelector("#refreshPrices");
+const inventoryList = document.querySelector("#inventoryList");
+const searchInput = document.querySelector("#inventorySearch");
+const selectedCount = document.querySelector("#selectedCount");
+let inventory = [];
 
-function setStatus(message) {
-  statusElement.textContent = message;
+function setStatus(message) { statusElement.textContent = message; }
+function escapeHtml(value = "") { return String(value).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+
+function requestToken() {
+  const existing = getSavedToken();
+  if (existing) return existing;
+  const token = window.prompt("Paste your fine-grained GitHub token for BasketIQ. It is saved only on this phone.");
+  if (!token?.trim()) throw new Error("A GitHub token is required.");
+  saveToken(token);
+  return token.trim();
 }
 
-function setShoppingList(items) {
-  listElement.value = items.join("\n");
+function renderInventory() {
+  const term = searchInput.value.trim().toLowerCase();
+  const visible = inventory.filter(item => item.name.toLowerCase().includes(term));
+  inventoryList.innerHTML = visible.length ? visible.map(item => `
+    <label class="inventory-item">
+      <input type="checkbox" data-id="${escapeHtml(item.id)}" ${item.checked ? "checked" : ""}>
+      <span>${escapeHtml(item.name)}</span>
+    </label>`).join("") : '<div class="inventory-empty">No matching items. Tap Add item to add this search.</div>';
+  selectedCount.textContent = `${getCheckedInventoryItems(inventory).length} selected`;
 }
 
-async function refreshDisplayedPrices() {
+async function refreshDisplayedPrices(data = null) {
   try {
-    setStatus("Loading the latest saved prices…");
-    const data = await loadPriceData();
-    renderSummary(summaryElement, data);
-    renderResults(resultsElement, data);
-    setStatus(data.updatedAt ? "Latest saved prices loaded." : "No scrape has been run yet.");
-  } catch (error) {
-    renderSummary(summaryElement, { results: [] });
-    renderResults(resultsElement, { results: [] });
-    setStatus(error.message);
-  }
+    const latest = data || await loadPriceData();
+    renderSummary(summaryElement, latest);
+    renderResults(resultsElement, latest);
+    setStatus(latest.updatedAt ? "Latest prices loaded." : "No price update has been run yet.");
+  } catch (error) { setStatus(error.message); }
 }
 
-function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) return;
-
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(error => {
-      console.warn("Service worker registration failed:", error);
-    });
-  });
+async function initializeInventory() {
+  try {
+    inventory = await loadInventory();
+    renderInventory();
+  } catch (error) { setStatus(error.message); }
 }
 
-setShoppingList(loadShoppingList(APP_CONFIG.storageKey, APP_CONFIG.defaultItems));
+inventoryList.addEventListener("change", event => {
+  const checkbox = event.target.closest('input[type="checkbox"]');
+  if (!checkbox) return;
+  const item = inventory.find(entry => entry.id === checkbox.dataset.id);
+  if (item) item.checked = checkbox.checked;
+  saveCheckedItems(inventory);
+  renderInventory();
+});
 
-document.querySelector("#saveList").addEventListener("click", () => {
-  const items = parseShoppingList(listElement.value);
-  saveShoppingList(APP_CONFIG.storageKey, items);
-  setStatus("Shopping list saved on this phone.");
+searchInput.addEventListener("input", renderInventory);
+
+document.querySelector("#addInventoryItem").addEventListener("click", () => {
+  inventory = addInventoryItem(inventory, searchInput.value);
+  saveCheckedItems(inventory);
+  searchInput.value = "";
+  renderInventory();
+  setStatus("Item added locally. Tap Save inventory for both phones to share it.");
+});
+
+document.querySelector("#clearSelection").addEventListener("click", () => {
+  inventory.forEach(item => { item.checked = false; });
+  saveCheckedItems(inventory);
+  renderInventory();
 });
 
 document.querySelector("#loadMeal").addEventListener("click", () => {
-  const currentItems = parseShoppingList(listElement.value);
-  const mergedItems = mergeItems(currentItems, MEAL_PRESETS.tacoNight);
-  setShoppingList(mergedItems);
-  saveShoppingList(APP_CONFIG.storageKey, mergedItems);
-  setStatus("Taco night ingredients added.");
+  for (const name of MEAL_PRESETS.tacoNight) {
+    inventory = addInventoryItem(inventory, name);
+  }
+  saveCheckedItems(inventory);
+  renderInventory();
+  setStatus("Taco night ingredients selected.");
 });
 
-document.querySelector("#refreshPrices").addEventListener("click", () => {
-  saveShoppingList(APP_CONFIG.storageKey, parseShoppingList(listElement.value));
-  window.open(APP_CONFIG.workflowUrl, "_blank", "noopener,noreferrer");
-  setStatus("Run the GitHub workflow, then return here and reload the page.");
+document.querySelector("#saveSharedInventory").addEventListener("click", async () => {
+  try {
+    setStatus("Saving shared inventory…");
+    await saveSharedInventory(requestToken(), getInventoryNames(inventory));
+    setStatus("Shared inventory saved. Your wife will see it after reopening or refreshing BasketIQ.");
+  } catch (error) { setStatus(error.message); }
 });
 
-registerServiceWorker();
+refreshButton.addEventListener("click", async () => {
+  const items = getCheckedInventoryItems(inventory);
+  if (!items.length) { setStatus("Check at least one item first."); return; }
+  refreshButton.disabled = true;
+  const startedAt = Date.now();
+  try {
+    setStatus("Starting browser scraper…");
+    await triggerPriceWorkflow(requestToken(), items, APP_CONFIG.zipCode);
+    const data = await waitForNewPrices(startedAt, setStatus);
+    await refreshDisplayedPrices(data);
+    resultsElement.scrollIntoView({ behavior: "smooth" });
+  } catch (error) { setStatus(error.message); }
+  finally { refreshButton.disabled = false; }
+});
+
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js"));
+initializeInventory();
 refreshDisplayedPrices();
