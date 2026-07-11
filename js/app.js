@@ -31,6 +31,16 @@ async function refreshDisplayedPrices() {
   }
 }
 
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(error => {
+      console.warn("Service worker registration failed:", error);
+    });
+  });
+}
+
 setShoppingList(loadShoppingList(APP_CONFIG.storageKey, APP_CONFIG.defaultItems));
 
 document.querySelector("#saveList").addEventListener("click", () => {
@@ -53,4 +63,5 @@ document.querySelector("#refreshPrices").addEventListener("click", () => {
   setStatus("Run the GitHub workflow, then return here and reload the page.");
 });
 
+registerServiceWorker();
 refreshDisplayedPrices();
